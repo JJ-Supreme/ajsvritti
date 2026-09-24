@@ -14,6 +14,8 @@ UI files are byte-identical copies of the original; only the backend layer chang
 
 ## Deliberate exceptions to fleet rules
 - **Pricing**: prices are exactly those of the original live site (they already sit on the rulebook tiers).
+  Exception: on 2026-09-24 the client asked for a few products at ₹199 and ₹299, so 12 existing cables/adapters were
+  repriced off-tier (6 at ₹199, 6 at ₹299: VM-0040/0056/0093/0107/0300/0325 and VM-0036/0057/0076/0094/0108/0134).
 - **Content**: all copy, brand name and contact details are kept as in the original codebase.
 - **Images**: the original photos, converted to WebP at their native aspect ratio (max 1200px), not cropped to 1:1.
 - **Framework**: Next 14 / Tailwind 3 / MUI kept (instead of our newer template versions) to preserve the UI exactly.
