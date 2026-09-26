@@ -21,3 +21,17 @@ export const STATUS_LABEL: Record<string, string> = {
   delivered: "Delivered",
   cancelled: "Cancelled",
 };
+
+// payment_method values stored on orders. `razorpay_order_id` doubles as the gateway
+// order id for Airpay orders (same column, no schema change).
+export const PAYMENT_METHOD_LABEL: Record<string, string> = {
+  cod: "Cash on Delivery",
+  razorpay: "Online (Razorpay)",
+  airpay: "Online (Airpay)",
+};
+
+export const PAYMENT_SHORT_LABEL: Record<string, string> = {
+  cod: "COD",
+  razorpay: "Razorpay",
+  airpay: "Airpay",
+};

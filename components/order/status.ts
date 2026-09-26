@@ -38,6 +38,6 @@ export function statusBadge(status: string): { label: string; className: string 
 
 export function paymentMethodLabel(method: string) {
   if (method === "cod") return "Cash on Delivery";
-  if (method === "razorpay" || method === "cashfree") return "Online Payment";
+  if (method === "razorpay" || method === "airpay" || method === "cashfree") return "Online Payment";
   return method;
 }

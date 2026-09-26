@@ -10,7 +10,7 @@ import Pager from "../../_components/pager";
 import Spinner from "@/components/Spinner";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/utils/currency";
-import { ORDER_STATUSES, STATUS_LABEL } from "@/lib/admin/orders";
+import { ORDER_STATUSES, PAYMENT_SHORT_LABEL, STATUS_LABEL } from "@/lib/admin/orders";
 
 type Row = {
   id: string;
@@ -121,7 +121,7 @@ const OrdersPage = () => {
                     <p className="text-xs text-muted-foreground">{o.guest_email || o.guest_phone}</p>
                   </td>
                   <td className="p-3">{o.order_items.reduce((s, i) => s + i.quantity, 0)}</td>
-                  <td className="p-3 uppercase text-xs">{o.payment_method}</td>
+                  <td className="p-3 text-xs">{PAYMENT_SHORT_LABEL[o.payment_method] || o.payment_method}</td>
                   <td className="p-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${badge[o.status] || "bg-gray-100"}`}>
                       {STATUS_LABEL[o.status] || o.status}

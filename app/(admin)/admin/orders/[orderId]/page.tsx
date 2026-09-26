@@ -11,7 +11,7 @@ import { ArrowLeft, Mail, Phone } from "lucide-react";
 import Spinner from "@/components/Spinner";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils/currency";
-import { ORDER_STATUSES, STATUS_LABEL } from "@/lib/admin/orders";
+import { ORDER_STATUSES, PAYMENT_METHOD_LABEL, STATUS_LABEL } from "@/lib/admin/orders";
 
 type Order = {
   id: string;
@@ -127,7 +127,8 @@ const OrderDetailPage = () => {
   const cityLine = [a.city, a.state, a.pincode].filter(Boolean).join(", ");
   const units = data.order_items.reduce((n, i) => n + i.quantity, 0);
   const isCod = data.payment_method === "cod";
-  const method = isCod ? "Cash on Delivery" : "Online (Razorpay)";
+  const method = PAYMENT_METHOD_LABEL[data.payment_method] || data.payment_method;
+  const gateway = data.payment_method === "airpay" ? "Airpay" : "Razorpay";
   const phone = data.guest_phone || a.phone;
   const initial = (a.name || data.guest_email || "?").trim().charAt(0).toUpperCase();
   const placed = new Date(data.created_at);
@@ -206,7 +207,7 @@ const OrderDetailPage = () => {
               </Button>
               {data.status === "pending_payment" && (
                 <p className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs leading-relaxed text-amber-800">
-                  This online order has not been paid yet. Only confirm it manually after checking the payment in Razorpay.
+                  This online order has not been paid yet. Only confirm it manually after checking the payment in {gateway}.
                 </p>
               )}
             </div>
@@ -249,7 +250,7 @@ const OrderDetailPage = () => {
               {!isCod && (
                 <>
                   <Field label="Payment ID" mono>{data.payment_id || "—"}</Field>
-                  <Field label="Razorpay order" mono>{data.razorpay_order_id || "—"}</Field>
+                  <Field label={`${gateway} order`} mono>{data.razorpay_order_id || "—"}</Field>
                 </>
               )}
             </dl>
