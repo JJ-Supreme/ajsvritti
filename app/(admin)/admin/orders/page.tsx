@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
+import { RefreshCw } from "lucide-react";
 import TitleHeader from "../../_components/title-header";
 import Pager from "../../_components/pager";
 import Spinner from "@/components/Spinner";
@@ -47,9 +48,10 @@ const OrdersPage = () => {
     return () => clearTimeout(t);
   }, [q]);
 
-  const { data, isLoading, error } = useQuery<{ orders: Row[]; total: number; totalPages: number }>({
+  const { data, isLoading, isFetching, error, refetch } = useQuery<{ orders: Row[]; total: number; totalPages: number }>({
     queryKey: ["admin-orders", search, status, page],
     queryFn: async () => (await axios.get("/api/admin/orders", { params: { q: search, status, page } })).data,
+    refetchInterval: 15_000, // pick up new orders / status changes without a manual reload
   });
 
   return (
@@ -77,6 +79,15 @@ const OrdersPage = () => {
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="inline-flex h-10 items-center gap-2 rounded-md border border-input bg-surface-1 px-3 text-sm hover:bg-white disabled:opacity-70"
+        >
+          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+          Refresh
+        </button>
       </div>
 
       {isLoading ? (
