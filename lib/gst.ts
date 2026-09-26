@@ -1,68 +1,71 @@
 /**
- * Indian GST configuration and calculation utilities.
+ * Indian GST utilities.
  *
- * A flat 18% GST applies to every item. The customer-facing breakdown shows
- * the tax explicitly and then waives it, so the customer pays exactly the
- * listed (whole-number) base price:
+ * Every listed price is GST-inclusive at a flat 18%. The order total therefore
+ * already contains the tax; this module only *unbundles* it for display and
+ * records:
+ *   taxable value = round(total / 1.18)
+ *   gst           = total - taxable value
+ * Intra-state orders (shipping state == seller state) split the GST into
+ * CGST + SGST halves; every other state is IGST.
  *
- *   Base Amount        ₹3,000
- *   (+) IGST 18.00%    ₹  540   <- tax calculated on the base
- *   Total              ₹3,540
- *   (-) Discount       ₹  540   <- equal waiver of the GST
- *   Grand Total        ₹3,000   <- amount actually charged
- *
- * So `gst` is the 18% computed on the base, and `total` equals the subtotal
- * because the GST is fully discounted back.
+ * This single function feeds the cart, checkout, server, email, confirmation
+ * page and order history so the numbers cannot drift apart.
  */
+import { SELLER_STATE } from "@/config/client";
 
-// Flat GST rate applied to all items.
 export const GST_RATE = 0.18;
 
-/**
- * Returns the 18% GST charged on a base amount (e.g. ₹3,000 -> ₹540).
- * This is the amount shown on both the "(+) IGST" line and the equal
- * "(-) Discount" (waiver) line.
- */
-export function getDisplayGst(baseAmount: number): number {
-  return Math.round(baseAmount * GST_RATE);
+export type TaxBreakdown = {
+  rate: number;
+  taxable_value: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  is_intra_state: boolean;
+  state: string | null;
+  seller_state: string;
+};
+
+const normaliseState = (s?: string | null) =>
+  String(s || "")
+    .toLowerCase()
+    .replace(/[^a-z]/g, "")
+    .replace(/^newdelhi$/, "delhi");
+
+export function isIntraState(shippingState?: string | null): boolean {
+  const a = normaliseState(shippingState);
+  return !!a && a === normaliseState(SELLER_STATE);
 }
 
-// ── Public API ───────────────────────────────────────────────────────────────
-
-/**
- * Returns the GST rate (e.g. 0.18) for a single item.
- *
- * The signature keeps `unitPrice` / `topLevelCategory` so existing callers do
- * not need to change, but the rate is now a flat 18% for every item.
- */
-export function getItemGstRate(
-  _unitPrice?: number,
-  _topLevelCategory?: string
-): number {
-  return GST_RATE;
+/** Unbundles the GST already included in a tax-inclusive `total`. */
+export function computeTaxBreakdown(total: number, shippingState?: string | null): TaxBreakdown {
+  const safeTotal = Math.max(0, Math.round(total || 0));
+  const taxable = Math.round(safeTotal / (1 + GST_RATE));
+  const gst = safeTotal - taxable;
+  const intra = isIntraState(shippingState);
+  const cgst = intra ? Math.floor(gst / 2) : 0;
+  const sgst = intra ? gst - cgst : 0;
+  return {
+    rate: GST_RATE,
+    taxable_value: taxable,
+    cgst,
+    sgst,
+    igst: intra ? 0 : gst,
+    is_intra_state: intra,
+    state: shippingState || null,
+    seller_state: SELLER_STATE,
+  };
 }
 
-/**
- * Calculates the charge breakdown for an array of cart-like items.
- * Each item must expose at least { price, quantity, topLevelCategory? }.
- *
- * Returns:
- *  - `subtotal`: base amount (sum of line totals)
- *  - `gst`:      18% GST charged on the base (shown, then waived)
- *  - `total`:    amount actually charged — equals `subtotal`, because the GST
- *                is fully discounted back so the customer pays the base price.
- */
+export const totalGst = (t: Pick<TaxBreakdown, "cgst" | "sgst" | "igst">) => t.cgst + t.sgst + t.igst;
+
+/** Cart-level totals. Prices are tax-inclusive, so `total === subtotal`. */
 export function calculateOrderGst(
   items: { price: number; quantity: number; topLevelCategory?: string }[]
 ): { gst: number; subtotal: number; total: number } {
   let subtotal = 0;
-
-  for (const item of items) {
-    subtotal += item.price * item.quantity;
-  }
-
-  // GST is calculated on the base and then waived via an equal discount, so
-  // the customer pays exactly the base amount (a whole number).
-  const gst = Math.round(subtotal * GST_RATE);
-  return { gst, subtotal, total: subtotal };
+  for (const item of items) subtotal += item.price * item.quantity;
+  const { taxable_value } = computeTaxBreakdown(subtotal);
+  return { gst: subtotal - taxable_value, subtotal, total: subtotal };
 }

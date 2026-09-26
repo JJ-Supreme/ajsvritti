@@ -8,3 +8,7 @@ export const COMPANY_DETAILS = {
   domain: 'ajsvision.shop',
   orderIdPrefix: 'AJS',
 };
+
+// State the seller is registered in (GST place of supply). The GSTIN itself is not
+// known yet; intra-state orders split GST into CGST+SGST, everything else is IGST.
+export const SELLER_STATE = 'Delhi';

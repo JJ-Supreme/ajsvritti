@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | AJS Vritti Vision Marketing',
+  title: 'Privacy Policy',
   description: 'Privacy Policy for AJS Vritti Vision Marketing - How we collect, use, and protect your data.',
 }
 

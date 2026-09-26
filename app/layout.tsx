@@ -8,6 +8,7 @@ import { ToastProvider } from "@/providers/toast-provider";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://ajsvision.shop"),
   title: {
     default: siteConfig.name,
     template: `%s | ${siteConfig.name}`,

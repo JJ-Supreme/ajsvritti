@@ -1,8 +1,9 @@
 import { Metadata } from 'next';
 import Footer from "@/components/footer";
+import ContactForm from "./contact-form";
 
 export const metadata: Metadata = {
-  title: 'Contact Us | AJS Vritti Vision Marketing',
+  title: 'Contact Us',
   description: 'Get in touch with AJS Vritti Vision Marketing for sales inquiries, support, or any questions about our IT hardware and computer accessories.',
 }
 
@@ -37,6 +38,11 @@ export default function ContactUs() {
               </a>
             </p>
           </div>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-bold mb-4">Send Us a Message</h2>
+          <ContactForm />
         </section>
 
         <section>

@@ -1,7 +1,6 @@
 import filteredData from "@/app/utils/filteredData";
 import ProductCard from "@/components/ui/product-card";
 import Pagination from "@/components/ui/pagination";
-import { siteConfig } from "@/config/site";
 import {
   getProductsByCategoryFromDB,
   getProductsByCategoryPaginatedFromDB,
@@ -9,25 +8,28 @@ import {
 } from "@/lib/serverDataAccess";
 import { Product } from "@/types";
 import { type Metadata } from "next";
+import { notFound } from "next/navigation";
+
+const dec = (v: string) => {
+  try {
+    return decodeURIComponent(v);
+  } catch {
+    return v;
+  }
+};
 
 export async function generateMetadata({
   params,
 }: {
   params: { category: string };
 }): Promise<Metadata> {
-  console.log('[CategoryPage] Fetching metadata for category:', params.category);
-  const data = await getProductsByCategoryFromDB(params.category);
-  if (!data || data.length <= 0)
-    return {
-      title: "AJS Vritti Vision Marketing",
-      description: "Your trusted destination for high-quality IT hardware and computer accessories.",
-    };
+  console.log('[CategoryPage] Fetching metadata for category:', dec(params.category));
+  const data = await getProductsByCategoryFromDB(dec(params.category));
+  if (!data || data.length <= 0) return { title: "Category not found" };
 
   return {
-    title: `${
-      data[0]?.category?.[0]?.toUpperCase() + data[0]?.category?.slice(1)
-    } | ${siteConfig.name}`,
-    description: data[0]?.title,
+    title: data[0].category,
+    description: `Shop ${data[0].category} at AJS Vritti Vision Marketing.`,
   };
 }
 
@@ -49,8 +51,8 @@ const CategoryPage = async ({
 
   if (hasFilters) {
     // When filters are applied, fetch all and filter in memory
-    console.log('[CategoryPage] Fetching all products for filtering:', params.category);
-    const allData = await getProductsByCategoryFromDB(params.category);
+    console.log('[CategoryPage] Fetching all products for filtering:', dec(params.category));
+    const allData = await getProductsByCategoryFromDB(dec(params.category));
     const filtered = filteredData(searchParams, allData);
     totalCount = filtered.length;
 
@@ -59,9 +61,9 @@ const CategoryPage = async ({
     products = filtered.slice(offset, offset + itemsPerPage);
   } else {
     // No filters - use database-level pagination
-    console.log('[CategoryPage] Fetching paginated products for category:', params.category);
+    console.log('[CategoryPage] Fetching paginated products for category:', dec(params.category));
     const paginatedResult = await getProductsByCategoryPaginatedFromDB(
-      params.category,
+      dec(params.category),
       currentPage,
       itemsPerPage
     );
@@ -72,10 +74,12 @@ const CategoryPage = async ({
   console.log('[CategoryPage] Products to display:', products.length, 'of', totalCount);
 
   if (totalCount === 0) {
+    const exists = (await getProductsByCategoryFromDB(dec(params.category))).length > 0;
+    if (!exists) notFound();
     return (
       <p className="font-serif text-lg">
         No products found in{" "}
-        <span className="font-bold">{params.category}</span>
+        <span className="font-bold">{dec(params.category)}</span>
       </p>
     );
   }
@@ -85,7 +89,7 @@ const CategoryPage = async ({
       <p className="font-serif text-lg mb-3">
         Showing {totalCount} products in{" "}
         <span className="font-bold">
-          {params.category.charAt(0).toUpperCase() + params.category.slice(1)}
+          {dec(params.category).charAt(0).toUpperCase() + dec(params.category).slice(1)}
         </span>
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">

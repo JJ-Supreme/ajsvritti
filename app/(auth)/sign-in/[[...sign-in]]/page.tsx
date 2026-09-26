@@ -1,13 +1,15 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuthUser } from "@/hooks/use-auth-user";
 
 export default function Page() {
   const router = useRouter();
+  const { isSignedIn, isLoading: authLoading } = useAuthUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,6 +19,14 @@ export default function Page() {
     if (typeof window === "undefined") return "/";
     return new URLSearchParams(window.location.search).get("redirect_url") || "/";
   }, []);
+
+  // Already signed in: skip the form and go where the user was heading.
+  useEffect(() => {
+    if (!authLoading && isSignedIn) {
+      if (redirectUrl.startsWith("http")) window.location.replace(redirectUrl);
+      else router.replace(redirectUrl);
+    }
+  }, [authLoading, isSignedIn, redirectUrl, router]);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -52,6 +62,8 @@ export default function Page() {
       setLoading(false);
     }
   };
+
+  if (authLoading || isSignedIn) return null;
 
   return (
     <div className="flex justify-center items-center min-h-[90vh] p-4">

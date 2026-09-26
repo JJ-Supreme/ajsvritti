@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Package, ShoppingCart } from "lucide-react";
+import { Heart, LayoutDashboard, Package, ShoppingCart, User } from "lucide-react";
 import useCart from "@/hooks/use-cart";
 import { useEffect, useState } from "react";
 import { useAuthUser } from "@/hooks/use-auth-user";
@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 
 const NavbarActions = () => {
   const [isMounted, setIsMounted] = useState(false);
-  const { isSignedIn } = useAuthUser();
+  const { isSignedIn, user } = useAuthUser();
+  const isAdmin = !!(user as any)?.isAdmin;
 
   useEffect(() => {
     setIsMounted(true);
@@ -30,17 +31,51 @@ const NavbarActions = () => {
   // Redesign for Light Background Header
   return (
     <div className="flex items-center gap-x-1">
+      {isAdmin && (
+        <Button
+          onClick={() => router.push("/admin")}
+          variant="ghost"
+          size="sm"
+          className="hidden sm:flex flex-col gap-0 h-auto py-1 px-2 text-foreground"
+        >
+          <LayoutDashboard size={20} />
+          <span className="text-[10px] font-medium">Admin</span>
+        </Button>
+      )}
+
+      <Button
+        onClick={() => router.push("/wishlist")}
+        variant="ghost"
+        size="sm"
+        className="hidden sm:flex flex-col gap-0 h-auto py-1 px-2 text-foreground"
+        aria-label="Wishlist"
+      >
+        <Heart size={20} />
+        <span className="text-[10px] font-medium">Wishlist</span>
+      </Button>
+
       {isSignedIn && (
         <Button
           onClick={() => router.push("/my-orders")}
           variant="ghost"
           size="sm"
-          className="flex flex-col gap-0 h-auto py-1 px-2 text-foreground"
+          className="hidden sm:flex flex-col gap-0 h-auto py-1 px-2 text-foreground"
         >
           <Package size={20} />
           <span className="text-[10px] font-medium">Orders</span>
         </Button>
       )}
+
+      <Button
+        onClick={() => router.push(isSignedIn ? "/account" : "/sign-in")}
+        variant="ghost"
+        size="sm"
+        className="flex flex-col gap-0 h-auto py-1 px-2 text-foreground"
+        aria-label={isSignedIn ? "My account" : "Sign in"}
+      >
+        <User size={20} />
+        <span className="text-[10px] font-medium">{isSignedIn ? "Account" : "Sign in"}</span>
+      </Button>
       
       <Button
         onClick={() => router.push("/cart")}

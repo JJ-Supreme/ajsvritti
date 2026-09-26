@@ -43,9 +43,9 @@ export function Summary() {
     setShowCheckoutForm(false);
   };
 
-  const handleOrderSuccess = () => {
+  const handleOrderSuccess = (orderNumber?: string) => {
     setShowCheckoutForm(false);
-    router.push("/order-confirmation");
+    router.push(orderNumber ? `/order-confirmation?order=${encodeURIComponent(orderNumber)}` : "/order-confirmation");
   };
 
   if (showCheckoutForm) {
@@ -89,26 +89,16 @@ export function Summary() {
           </>
         )}
         <div className="flex items-center justify-between pt-4">
-          <div className="text-sm text-muted-foreground">Base Amount</div>
+          <div className="text-sm text-muted-foreground">Subtotal</div>
           <p className="text-foreground font-medium tabular-nums">{formatPrice(discountedSubtotal)}</p>
         </div>
         <div className="flex items-center justify-between pt-2 border-t border-border">
-          <div className="text-sm text-muted-foreground">(+) IGST: 18.00%</div>
+          <div className="text-sm text-muted-foreground">GST (18%) included in price</div>
           <p className="text-foreground font-medium tabular-nums">{formatPrice(totalGst)}</p>
         </div>
         <div className="flex items-center justify-between pt-2 border-t border-border">
-          <div className="text-sm text-muted-foreground">Total</div>
-          <p className="text-foreground font-medium tabular-nums">{formatPrice(discountedSubtotal + totalGst)}</p>
-        </div>
-        <div className="flex items-center justify-between pt-2 border-t border-border">
-          <div className="text-sm text-emerald-600 font-medium">(−) Discount</div>
-          <p className="text-emerald-600 font-medium tabular-nums">−{formatPrice(totalGst)}</p>
-        </div>
-        <div className="flex items-center justify-between pt-2 border-t border-border">
           <div className="text-sm text-muted-foreground">Shipping</div>
-          <p className="text-foreground font-medium">
-            {originalSubtotal > 0 ? "Calculated at checkout" : "Free"}
-          </p>
+          <p className="text-foreground font-medium">Free</p>
         </div>
         <div className="flex items-center justify-between pt-3 border-t border-border">
           <div className="text-base font-semibold text-foreground">Grand Total</div>
@@ -116,12 +106,15 @@ export function Summary() {
             {formatPrice(grandTotal)}
           </p>
         </div>
+        <p className="text-xs text-muted-foreground">
+          All prices are inclusive of GST. CGST/SGST or IGST is itemised at checkout once your delivery state is known.
+        </p>
       </div>
       {!isSignedIn && items.length > 0 ? (
         <div className="mt-6 rounded-lg border border-border bg-accent/50 p-4 text-sm text-center space-y-3">
           <p className="text-foreground">You must log in to your account to purchase products.</p>
           <Link
-            href="/sign-in"
+            href="/sign-in?redirect_url=/cart"
             className="inline-block w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white text-center hover:bg-primary/90 transition-colors"
           >
             Log In

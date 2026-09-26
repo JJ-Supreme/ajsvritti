@@ -12,7 +12,7 @@ import ProductCard from "@/components/ui/product-card";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Featured | AJS Vritti Vision Marketing",
+  title: "Featured",
   description: `Featured products at AJS Vritti Vision Marketing - high-quality IT hardware and computer accessories.`,
 };
 

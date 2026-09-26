@@ -14,9 +14,17 @@ const PriceInput = ({ data }: PriceInputProps) => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [minPrice, setMinPrice] = useState<number>(0);
-  const [maxPrice, setMaxPrice] = useState<number>(0);
-  const [value, setValue] = useState<number>(0);
+  // Bounds start from the real catalog prices (no 0-0 slider flash before the effect runs).
+  const initialPrices = data.map((p) => Number(p.price)).filter((n) => Number.isFinite(n));
+  const initialMin = initialPrices.length ? Math.min(...initialPrices) : 0;
+  const initialMax = initialPrices.length ? Math.max(...initialPrices) : 0;
+  const initialParam = Number(searchParams.get("price"));
+
+  const [minPrice, setMinPrice] = useState<number>(initialMin);
+  const [maxPrice, setMaxPrice] = useState<number>(initialMax);
+  const [value, setValue] = useState<number>(
+    searchParams.get("price") && !isNaN(initialParam) ? initialParam : initialMax
+  );
 
   const handleSortChange = useCallback(
     async (value: string) => {

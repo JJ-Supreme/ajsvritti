@@ -6,7 +6,7 @@ import { useAuthUser } from '@/hooks/use-auth-user';
 import { Button } from './ui/button';
 import NavbarSearch from './navbar-search';
 import Link from 'next/link';
-import { Menu, X, Home, ShoppingBag, Info, Phone } from 'lucide-react';
+import { Menu, X, Home, ShoppingBag, Info, Phone, User, Package, Heart, LayoutDashboard } from 'lucide-react';
 import { useRouter, usePathname } from "next/navigation";
 import useCart from "@/hooks/use-cart";
 import { useState, useEffect } from 'react';
@@ -179,6 +179,25 @@ const NavBar = () => {
               <Link href="/contact-us" className="flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-white/10 transition-colors">
                 <Phone size={18} /> Contact Us
               </Link>
+              <div className="my-2 border-t border-white/10" />
+              {isSignedIn && (
+                <>
+                  <Link href="/account" className="flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-white/10 transition-colors">
+                    <User size={18} /> My Account
+                  </Link>
+                  <Link href="/my-orders" className="flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-white/10 transition-colors">
+                    <Package size={18} /> My Orders
+                  </Link>
+                </>
+              )}
+              <Link href="/wishlist" className="flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-white/10 transition-colors">
+                <Heart size={18} /> Wishlist
+              </Link>
+              {(user as any)?.isAdmin && (
+                <Link href="/admin" className="flex items-center gap-3 px-4 py-3 text-sm font-medium hover:bg-white/10 transition-colors">
+                  <LayoutDashboard size={18} /> Admin
+                </Link>
+              )}
             </nav>
             <div className="p-4 border-t border-white/10">
               {isSignedIn ? (

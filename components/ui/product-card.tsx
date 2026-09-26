@@ -6,6 +6,7 @@ import { Product } from "@/types";
 import { MouseEventHandler } from "react";
 import useCart from "@/hooks/use-cart";
 import { ShoppingCart } from "lucide-react";
+import WishlistButton from "@/components/wishlist-button";
 
 interface ProductCard {
   data: Product;
@@ -60,6 +61,10 @@ const ProductCard: React.FC<ProductCard> = ({ data }) => {
           unoptimized
           className="object-contain group-hover:scale-105 transition-transform duration-300"
           sizes="(max-width: 640px) 50vw, 25vw"
+        />
+        <WishlistButton
+          productId={data.id}
+          className="absolute top-3 right-3 bg-white/90 border border-border rounded-full p-2 shadow-soft-sm hover:bg-white"
         />
         {/* Add to Cart overlay — visible on hover (always on mobile) */}
         <button

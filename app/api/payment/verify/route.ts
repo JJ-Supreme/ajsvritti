@@ -54,6 +54,7 @@ export async function POST(req: Request) {
         total: order.total,
         paymentMethod: "razorpay",
         address: [s.street, s.post_office, s.city, s.state, s.pincode].filter(Boolean).join(", "),
+        tax: order.tax_breakdown || null,
       }).catch((err) => console.error("Order confirmation email failed:", err));
     }
 

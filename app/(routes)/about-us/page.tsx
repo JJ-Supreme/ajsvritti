@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import Footer from "@/components/footer";
 
 export const metadata: Metadata = {
-  title: 'About Us | AJS Vritti Vision Marketing',
+  title: 'About Us',
   description: 'Welcome to AJS Vritti Vision Marketing - Your trusted destination for high-quality IT hardware and computer accessories.',
 }
 

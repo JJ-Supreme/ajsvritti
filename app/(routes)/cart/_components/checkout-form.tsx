@@ -21,7 +21,10 @@ import { toast } from "react-hot-toast";
 import { Loader2, Check } from "lucide-react";
 import useCart from "@/hooks/use-cart";
 import axios from "axios";
-import { useRouter } from "next/navigation";
+import { useAuthUser } from "@/hooks/use-auth-user";
+import { calculateOrderGst, computeTaxBreakdown } from "@/lib/gst";
+import { getBulkUnitPrice } from "@/lib/utils/pricing";
+import { formatPrice } from "@/lib/utils/currency";
 
 const formSchema = z.object({
   customerName: z.string().min(2, "Name must be at least 2 characters"),
@@ -44,7 +47,7 @@ const formSchema = z.object({
 type CheckoutFormValues = z.infer<typeof formSchema>;
 
 interface CheckoutFormProps {
-  onSuccess: () => void;
+  onSuccess: (orderNumber?: string) => void;
   onBack: () => void;
 }
 
@@ -55,7 +58,6 @@ export function CheckoutForm({ onSuccess, onBack }: CheckoutFormProps) {
   const [showPostOfficeList, setShowPostOfficeList] = useState(false);
   const [openInstructionsFor, setOpenInstructionsFor] = useState<string>("");
   const { items, removeAllCart } = useCart();
-  const router = useRouter();
 
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(formSchema),
@@ -71,7 +73,10 @@ export function CheckoutForm({ onSuccess, onBack }: CheckoutFormProps) {
     },
   });
 
-  const fetchPostOffices = async (pincode: string) => {
+  const fetchPostOffices = async (
+    pincode: string,
+    preferred?: { district?: string; state?: string }
+  ) => {
     if (pincode.length !== 6) return;
     setPincodeLoading(true);
     try {
@@ -84,6 +89,17 @@ export function CheckoutForm({ onSuccess, onBack }: CheckoutFormProps) {
         setPostOffices(data.postOffices);
         setShowPostOfficeList(true);
         form.clearErrors("pincode");
+        if (preferred) {
+          const match = data.postOffices.find(
+            (po: any) =>
+              String(po.District || "").toLowerCase() === String(preferred.district || "").toLowerCase() &&
+              String(po.State || "").toLowerCase() === String(preferred.state || "").toLowerCase()
+          );
+          if (match) {
+            selectPostOffice(match);
+            setOpenInstructionsFor(`${match.Name}|${match.Pincode}`);
+          }
+        }
       } else {
         setPostOffices([]);
         setShowPostOfficeList(false);
@@ -133,6 +149,46 @@ export function CheckoutForm({ onSuccess, onBack }: CheckoutFormProps) {
     : "";
   const customerName = form.watch("customerName");
   const customerPhone = form.watch("customerPhone");
+
+  const { user, isSignedIn } = useAuthUser();
+  const [prefilled, setPrefilled] = useState(false);
+
+  // Pre-fill from the account's default address (and email) when signed in.
+  useEffect(() => {
+    if (!isSignedIn || prefilled) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await axios.get("/api/addresses");
+        if (cancelled) return;
+        setPrefilled(true);
+        if (user?.email && !form.getValues("customerEmail")) form.setValue("customerEmail", user.email);
+        const list: any[] = Array.isArray(data) ? data : [];
+        const def = list.find((a) => a.is_default) || list[0];
+        if (!def || form.getValues("address") || form.getValues("pincode")) return;
+        form.setValue("customerName", def.full_name);
+        form.setValue("customerPhone", String(def.phone || "").replace(/\D/g, "").slice(-10));
+        form.setValue("address", [def.street, def.apartment].filter(Boolean).join(", "));
+        form.setValue("pincode", def.pin_code);
+        fetchPostOffices(def.pin_code, { district: def.city, state: def.state });
+      } catch {
+        setPrefilled(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSignedIn]);
+
+  const cartTotal = calculateOrderGst(
+    items.map((item) => ({
+      price: getBulkUnitPrice(item.price, item.quantity),
+      quantity: item.quantity,
+    }))
+  ).total;
+  const tax = computeTaxBreakdown(cartTotal, selectedPostOffice?.state);
+  const stateKnown = !!selectedPostOffice?.state;
 
   const safe = (v: any) => (typeof v === "string" ? v.trim() : "");
   const toUpper = (v: any) => safe(v).toUpperCase();
@@ -198,6 +254,7 @@ export function CheckoutForm({ onSuccess, onBack }: CheckoutFormProps) {
       if (data.paymentMethod === "razorpay") {
         await openRazorpay({
           orderId,
+          orderNumber: response.data.orderNumber,
           metadata,
           name: data.customerName,
           email: data.customerEmail,
@@ -209,8 +266,7 @@ export function CheckoutForm({ onSuccess, onBack }: CheckoutFormProps) {
       // Cash on Delivery
       toast.success("Order placed successfully!");
       removeAllCart();
-      onSuccess();
-      router.push("/order-confirmation");
+      onSuccess(response.data.orderNumber);
     } catch (error: any) {
       console.error("Checkout error:", error);
       toast.error(
@@ -233,12 +289,14 @@ export function CheckoutForm({ onSuccess, onBack }: CheckoutFormProps) {
 
   const openRazorpay = async ({
     orderId,
+    orderNumber,
     metadata,
     name,
     email,
     phone,
   }: {
     orderId: string;
+    orderNumber?: string;
     metadata: any;
     name: string;
     email: string;
@@ -269,8 +327,7 @@ export function CheckoutForm({ onSuccess, onBack }: CheckoutFormProps) {
           });
           toast.success("Payment successful!");
           removeAllCart();
-          onSuccess();
-          router.push("/order-confirmation");
+          onSuccess(orderNumber);
         } catch {
           toast.error("Payment could not be verified. If money was deducted, please contact support.");
         } finally {
@@ -524,6 +581,45 @@ export function CheckoutForm({ onSuccess, onBack }: CheckoutFormProps) {
               </FormItem>
             )}
           />
+        </div>
+
+        <div className="rounded-lg border border-border bg-white p-4 text-sm space-y-2">
+          <h3 className="text-base font-medium">Order Summary</h3>
+          <div className="flex justify-between text-muted-foreground">
+            <span>Taxable value</span>
+            <span className="tabular-nums text-foreground">{formatPrice(tax.taxable_value)}</span>
+          </div>
+          {!stateKnown ? (
+            <div className="flex justify-between text-muted-foreground">
+              <span>GST (18%) included</span>
+              <span className="tabular-nums text-foreground">{formatPrice(cartTotal - tax.taxable_value)}</span>
+            </div>
+          ) : tax.is_intra_state ? (
+            <>
+              <div className="flex justify-between text-muted-foreground">
+                <span>CGST (9%)</span>
+                <span className="tabular-nums text-foreground">{formatPrice(tax.cgst)}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>SGST (9%)</span>
+                <span className="tabular-nums text-foreground">{formatPrice(tax.sgst)}</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between text-muted-foreground">
+              <span>IGST (18%)</span>
+              <span className="tabular-nums text-foreground">{formatPrice(tax.igst)}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-muted-foreground">
+            <span>Shipping</span>
+            <span className="text-foreground">Free</span>
+          </div>
+          <div className="flex justify-between border-t border-border pt-2 font-semibold">
+            <span>Total to pay</span>
+            <span className="tabular-nums">{formatPrice(cartTotal)}</span>
+          </div>
+          <p className="text-xs text-muted-foreground">All prices are inclusive of GST.</p>
         </div>
 
         <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 pt-4">

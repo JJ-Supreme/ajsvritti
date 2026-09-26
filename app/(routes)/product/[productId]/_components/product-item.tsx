@@ -12,6 +12,7 @@ import LoadingSkeleton from "./loading-skeleton";
 import Link from "next/link";
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
+import Reviews from "./reviews";
 
 // Technical Data Tabs Component
 const ProductTabs = ({ details, description, activeTab, setActiveTab }: { details: any, description: string, activeTab: string, setActiveTab: (tab: string) => void }) => {
@@ -170,6 +171,9 @@ const ProductItem = () => {
              activeTab={activeTab}
              setActiveTab={setActiveTab}
           />
+
+          {/* Customer Reviews */}
+          <Reviews productId={productQuery.data.id} />
 
           {/* Related Products */}
           {filteredData.length > 0 && (

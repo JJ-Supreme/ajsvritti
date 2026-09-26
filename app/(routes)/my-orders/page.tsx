@@ -2,11 +2,15 @@
 
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
+import Link from "next/link";
 import { Package, Loader2, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import Container from "@/components/ui/container";
-import { getDisplayGst } from "@/lib/gst";
+import { formatPrice } from "@/lib/utils/currency";
+import { TaxLines } from "@/components/order/tax-lines";
+import { paymentMethodLabel, statusBadge } from "@/components/order/status";
+import type { TaxBreakdown } from "@/lib/gst";
 
 type OrderItem = {
   id: string;
@@ -15,23 +19,20 @@ type OrderItem = {
   size: string | null;
   color: string | null;
   price: number;
-  product: {
-    id: string;
-    title: string;
-    imageIds: string[];
-  };
+  image: string | null;
 };
 
 type Order = {
   id: string;
+  orderNumber: string;
+  status: string;
   isPaid: boolean;
   paymentMethod: string;
-  paymentStatus: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
-  orderStatus?: 'PENDING' | 'DELIVERED' | 'CANCELLED' | 'ON-HOLD';
   customerName: string;
   phone: string;
   address: string;
   totalAmount: number;
+  taxBreakdown: TaxBreakdown;
   createdAt: string;
   orderItems: OrderItem[];
 };
@@ -76,33 +77,6 @@ const MyOrdersPage = () => {
     );
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "DELIVERED":
-        return "text-green-600 bg-green-50";
-      case "PENDING":
-        return "text-yellow-600 bg-yellow-50";
-      case "ON-HOLD":
-        return "text-gray-600 bg-gray-50";
-      case "CANCELLED":
-        return "text-red-600 bg-red-50";
-      default:
-        return "text-gray-600 bg-gray-50";
-    }
-  };
-
-  const getPaymentMethodLabel = (method: string) => {
-    switch (method) {
-      case "cod":
-        return "Cash on Delivery";
-      case "cashfree":
-      case "razorpay":
-        return "Online Payment";
-      default:
-        return method;
-    }
-  };
-
   return (
     <Container>
       <div className="py-6 sm:py-8">
@@ -119,136 +93,93 @@ const MyOrdersPage = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                className="border rounded-lg p-4 sm:p-6 bg-white shadow-sm hover:shadow-md transition"
-              >
-                {/* Order Header */}
-                <div className="flex flex-col sm:flex-row sm:flex-wrap justify-between items-start gap-3 sm:gap-4 mb-4 pb-4 border-b">
-                  <div className="space-y-1">
-                    <p className="text-xs sm:text-sm text-gray-500">
-                      Order placed on{" "}
-                      {new Date(order.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </p>
-                    <p className="text-xs sm:text-sm text-gray-500">
-                      Order ID: <span className="font-mono">{order.id.slice(0, 8)}</span>
-                    </p>
+            {orders.map((order) => {
+              const badge = statusBadge(order.status);
+              return (
+                <div
+                  key={order.id}
+                  className="border rounded-lg p-4 sm:p-6 bg-white shadow-sm hover:shadow-md transition"
+                >
+                  {/* Order Header */}
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap justify-between items-start gap-3 sm:gap-4 mb-4 pb-4 border-b">
+                    <div className="space-y-1">
+                      <p className="text-xs sm:text-sm text-gray-500">
+                        Order placed on{" "}
+                        {new Date(order.createdAt).toLocaleDateString("en-IN", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </p>
+                      <p className="text-xs sm:text-sm text-gray-500">
+                        Order number: <span className="font-mono">{order.orderNumber}</span>
+                      </p>
+                      <Link
+                        href={`/track-order?order=${encodeURIComponent(order.orderNumber)}`}
+                        className="inline-block text-xs sm:text-sm font-medium text-primary hover:underline"
+                      >
+                        Track order
+                      </Link>
+                    </div>
+
+                    <div className="flex flex-col items-start sm:items-end gap-1.5 sm:gap-2 text-xs sm:text-sm">
+                      <span className="flex flex-wrap items-center gap-1">
+                        <span className="text-gray-600">Status: </span>
+                        <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-medium ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                      </span>
+                      <span className="flex flex-wrap items-center gap-1">
+                        <span className="text-gray-600">Payment: </span>
+                        <span
+                          className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-medium ${
+                            order.isPaid ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {order.isPaid ? "PAID" : order.status === "cancelled" ? "CANCELLED" : "UNPAID"}
+                        </span>
+                      </span>
+                      <span className="flex flex-wrap items-center gap-1">
+                        <span className="text-gray-600">Method: </span>
+                        <span className="text-gray-600">{paymentMethodLabel(order.paymentMethod)}</span>
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col items-start sm:items-end gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                    <span className="flex flex-wrap items-center gap-1">
-                      <span className="text-gray-600">Delivery: </span>
-                      <span
-                        className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-medium ${getStatusColor(
-                          order.orderStatus || 'PENDING'
-                        )}`}
-                      >
-                        {(order.orderStatus || 'PENDING').toUpperCase()}
-                      </span>
-                    </span>
-                    <span className="flex flex-wrap items-center gap-1">
-                      <span className="text-gray-600">Payment: </span>
-                      <span
-                        className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs font-medium ${
-                          order.isPaid || (order.paymentStatus || '').toUpperCase() === 'PAID'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
-                        {order.isPaid || (order.paymentStatus || '').toUpperCase() === 'PAID' ? 'PAID' : 'UNPAID'}
-                      </span>
-                    </span>
-                    <span className="flex flex-wrap items-center gap-1">
-                      <span className="text-gray-600">Method: </span>
-                      <span className="text-gray-600">
-                        {getPaymentMethodLabel(order.paymentMethod)}
-                      </span>
-                    </span>
+                  {/* Order Items */}
+                  <div className="space-y-3 mb-4">
+                    {order.orderItems.map((item) => (
+                      <div key={item.id} className="flex gap-3 sm:gap-4 items-center hover:bg-gray-50 p-2 rounded">
+                        {item.image && (
+                          <img
+                            src={item.image}
+                            alt={item.productName}
+                            className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm sm:text-base truncate">{item.productName}</p>
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs sm:text-sm text-gray-600">
+                            <span>Qty: {item.quantity}</span>
+                            {item.size && <span>Size: {item.size}</span>}
+                            {item.color && <span>Color: {item.color}</span>}
+                            <span className="font-medium tabular-nums">{formatPrice(item.price)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <TaxLines tax={order.taxBreakdown} total={order.totalAmount} />
+
+                  {/* Delivery Address */}
+                  <div className="pt-3 mt-3 border-t">
+                    <p className="text-xs sm:text-sm text-gray-600">Delivery Address:</p>
+                    <p className="text-xs sm:text-sm font-medium break-words">{order.address}</p>
                   </div>
                 </div>
-
-                {/* Order Items */}
-                <div className="space-y-3 mb-4">
-                  {order.orderItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex gap-3 sm:gap-4 items-center hover:bg-gray-50 p-2 rounded"
-                    >
-                      {item.product?.imageIds?.[0] && (
-                        <img
-                          src={item.product.imageIds[0]}
-                          alt={item.productName}
-                          className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded shrink-0"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm sm:text-base truncate">{item.productName}</p>
-                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs sm:text-sm text-gray-600">
-                          <span>Qty: {item.quantity}</span>
-                          {item.size && <span>Size: {item.size}</span>}
-                          {item.color && <span>Color: {item.color}</span>}
-                          <span className="font-medium tabular-nums">
-                            ₹{item.price.toLocaleString("en-IN")}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Charge Breakdown */}
-                {(() => {
-                  const subtotal = order.orderItems.reduce(
-                    (sum, item) => sum + item.price * item.quantity,
-                    0
-                  );
-                  const gst = getDisplayGst(subtotal);
-                  return (
-                    <div className="pt-4 border-t space-y-2 text-sm">
-                      {order.orderItems.map((item) => (
-                        <div key={item.id} className="flex justify-between text-gray-500">
-                          <span className="truncate mr-4">
-                            {item.productName} x {item.quantity}
-                          </span>
-                          <span className="tabular-nums shrink-0">₹{(item.price * item.quantity).toLocaleString("en-IN")}</span>
-                        </div>
-                      ))}
-                      <div className="flex justify-between text-gray-600 pt-1 border-t border-dashed">
-                        <span>Base Amount</span>
-                        <span className="tabular-nums">₹{subtotal.toLocaleString("en-IN")}</span>
-                      </div>
-                      <div className="flex justify-between text-gray-600">
-                        <span>(+) IGST: 18.00%</span>
-                        <span className="tabular-nums">₹{gst.toLocaleString("en-IN")}</span>
-                      </div>
-                      <div className="flex justify-between text-gray-600">
-                        <span>Total</span>
-                        <span className="tabular-nums">₹{(subtotal + gst).toLocaleString("en-IN")}</span>
-                      </div>
-                      <div className="flex justify-between text-emerald-600">
-                        <span>(−) Discount</span>
-                        <span className="tabular-nums">−₹{gst.toLocaleString("en-IN")}</span>
-                      </div>
-                      <div className="flex justify-between font-semibold text-base pt-1 border-t">
-                        <span>Grand Total</span>
-                        <span className="tabular-nums">₹{order.totalAmount.toLocaleString("en-IN")}</span>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Delivery Address */}
-                <div className="pt-3 mt-1">
-                  <p className="text-xs sm:text-sm text-gray-600">Delivery Address:</p>
-                  <p className="text-xs sm:text-sm font-medium break-words">{order.address}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

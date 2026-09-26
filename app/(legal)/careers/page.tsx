@@ -1,5 +1,10 @@
 import Link from "next/link";
 
+export const metadata = {
+  title: "Careers",
+  description: "Join AJS Vritti Vision Marketing - open roles across operations, procurement, sales and customer support.",
+};
+
 const CareersPage = () => {
   return (
     <main className="min-h-[60vh] max-w-3xl mx-auto px-4 py-14">

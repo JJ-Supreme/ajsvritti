@@ -11,8 +11,9 @@ import { Product } from "@/types";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Shop | Demo Store",
-  description: `Shop for e-ecommerce, selling products, and new productivity`,
+  title: "Shop",
+  description:
+    "Browse IT hardware, cables, adapters, networking equipment, computer accessories and power protection products from AJS Vritti Vision Marketing.",
 };
 
 const ShopPage = async ({

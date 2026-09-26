@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 
 import { Product } from "@/types";
 import { getBulkUnitPrice } from "@/lib/utils/pricing";
+import { MAX_QTY_PER_ITEM } from "@/lib/constants";
 
 export interface CartItem extends Product {
   quantity: number;
@@ -34,6 +35,10 @@ const useCart = create(
         );
 
         if (existingItem !== -1) {
+          if (currentItems[existingItem].quantity >= MAX_QTY_PER_ITEM) {
+            toast.error("Maximum quantity per item reached");
+            return;
+          }
           const updatedItems = [...currentItems];
           const newQty = updatedItems[existingItem].quantity + 1;
           updatedItems[existingItem].quantity = newQty;

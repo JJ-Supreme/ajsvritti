@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Cart | AJS Vritti Vision Marketing",
+  title: "Cart",
   description: `Your shopping cart at AJS Vritti Vision Marketing.`,
 };
 

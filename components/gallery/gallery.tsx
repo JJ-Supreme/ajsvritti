@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import NextImage from "next/image";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Tab } from "@headlessui/react";
 import GalleryTab from "./gallery-tab";
 
@@ -30,8 +32,17 @@ const upgradeImageResolution = (url: string): string => {
 };
 
 const Gallery: React.FC<GalleryProps> = ({ images = [] }) => {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const total = images.length;
+  const go = (delta: number) => setSelectedIndex((i) => (i + delta + total) % total);
+
   return (
-    <Tab.Group as="div" className="flex flex-col-reverse">
+    <Tab.Group
+      as="div"
+      className="flex flex-col-reverse"
+      selectedIndex={selectedIndex}
+      onChange={setSelectedIndex}
+    >
       <div className="mx-auto mt-4 w-full max-w-2xl sm:block lg:max-w-2xl">
         <Tab.List className="grid grid-cols-4 gap-4">
           {images.map((image, index) => (
@@ -39,6 +50,7 @@ const Gallery: React.FC<GalleryProps> = ({ images = [] }) => {
           ))}
         </Tab.List>
       </div>
+      <div className="relative">
       <Tab.Panels className="aspect-square w-full bg-white border border-border rounded-lg p-4">
         {images.map((image, index) => (
           <Tab.Panel key={index}>
@@ -56,6 +68,27 @@ const Gallery: React.FC<GalleryProps> = ({ images = [] }) => {
           </Tab.Panel>
         ))}
       </Tab.Panels>
+      {total > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={() => go(-1)}
+            aria-label="Previous image"
+            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 border border-border p-1.5 shadow-soft-sm hover:bg-white transition-colors"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={() => go(1)}
+            aria-label="Next image"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 border border-border p-1.5 shadow-soft-sm hover:bg-white transition-colors"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </>
+      )}
+      </div>
     </Tab.Group>
   );
 };

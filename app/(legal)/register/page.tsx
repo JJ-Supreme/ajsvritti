@@ -1,5 +1,10 @@
 import Link from "next/link";
 
+export const metadata = {
+  title: "Business Registration",
+  description: "Register your business with AJS Vritti Vision Marketing for GST invoicing, bulk pricing and credit terms.",
+};
+
 const RegisterPage = () => {
   return (
     <main className="min-h-[60vh] max-w-3xl mx-auto px-4 py-14">

@@ -8,6 +8,7 @@ import useCart from "@/hooks/use-cart";
 import { useState } from "react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import WishlistButton from "@/components/wishlist-button";
 
 interface InfoProps {
   data: Product;
@@ -149,6 +150,12 @@ const Info: React.FC<InfoProps> = ({ data, productDetails }) => {
                <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5" onClick={onShare}>
                  <Share2 size={12} /> Share
                </Button>
+               <WishlistButton
+                 productId={data.id}
+                 size={12}
+                 label
+                 className="h-8 px-3 border border-input rounded-md bg-background hover:bg-accent"
+               />
              </div>
            </div>
         </div>
@@ -162,6 +169,7 @@ const Info: React.FC<InfoProps> = ({ data, productDetails }) => {
                  <span className="text-2xl font-bold text-foreground tabular-nums">{formatPrice(data.price)}</span>
                  <span className="text-xs text-muted-foreground">Unit Price</span>
               </div>
+              <p className="-mt-3 mb-4 text-[11px] text-muted-foreground">All prices are inclusive of GST.</p>
 
               {/* Bulk Pricing */}
               <div className="mb-4 bg-white border border-border rounded-lg overflow-hidden">

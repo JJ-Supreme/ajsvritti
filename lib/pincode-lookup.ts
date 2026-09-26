@@ -43,7 +43,7 @@ type CachedPincodeLookup = {
 const DATA_GOV_RESOURCE_ID = "5c2f62fe-5afa-4119-a499-fec9d604d5bd";
 const DEFAULT_DATA_GOV_API_KEY = "579b464db66ec23bdd000001cdc3b564546246a772a26393094f5645";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
-const PINCODE_API_TIMEOUT_MS = 8000;
+const PINCODE_API_TIMEOUT_MS = 6000;
 const PINCODE_DATA_PATH = path.join(process.cwd(), "data", "pincode.csv");
 
 const pincodeCache = new Map<string, CachedPincodeLookup>();

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { CLIENT_ID } from "@/config/client";
+import { computeTaxBreakdown, type TaxBreakdown } from "@/lib/gst";
 
 export function generateOrderNumber() {
   const t = Date.now().toString().slice(-7);
@@ -29,6 +30,7 @@ export type NewOrder = {
   razorpay_order_id?: string | null;
   shipping_address: Record<string, any>;
   notes?: string | null;
+  tax_breakdown?: TaxBreakdown | null;
 };
 
 export async function createOrder(order: NewOrder, items: NewOrderItem[]) {
@@ -52,6 +54,7 @@ export async function createOrder(order: NewOrder, items: NewOrderItem[]) {
       shipping_address: order.shipping_address,
       contact: { email: order.guest_email || "", phone: order.guest_phone || "" },
       notes: order.notes || null,
+      tax_breakdown: order.tax_breakdown || null,
     })
     .select()
     .single();
@@ -84,3 +87,59 @@ export async function createOrder(order: NewOrder, items: NewOrderItem[]) {
 
   return { success: true as const, order: data };
 }
+
+
+export const ORDER_SELECT = "*, order_items(*)";
+
+const PAID_STATUSES = ["confirmed", "processing", "shipped", "delivered"];
+
+export function formatAddress(a: any): string {
+  return [a?.street, a?.post_office, a?.city, a?.state, a?.pincode].filter(Boolean).join(", ");
+}
+
+/** One shape for every consumer: confirmation page, history, tracking, admin-free APIs. */
+export function serializeOrder(o: any) {
+  const s = o.shipping_address || {};
+  const status = String(o.status || "pending_payment").toLowerCase();
+  const isCod = o.payment_method === "cod";
+  const isPaid = isCod ? status === "delivered" : PAID_STATUSES.includes(status);
+  const items = (o.order_items || []).map((it: any) => ({
+    id: it.id,
+    productName: it.product_name,
+    productId: String(it.product_id ?? ""),
+    price: it.unit_price,
+    quantity: it.quantity,
+    size: it.size,
+    color: it.color,
+    image: it.product_image || null,
+  }));
+  const subtotal = items.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0);
+  return {
+    id: o.id,
+    orderNumber: o.order_number,
+    status,
+    paymentMethod: o.payment_method,
+    isPaid,
+    paymentStatus: isPaid ? "PAID" : status === "cancelled" ? "CANCELLED" : "PENDING",
+    customerName: s.name || "",
+    phone: o.guest_phone || s.phone || "",
+    address: formatAddress(s),
+    shippingAddress: {
+      name: s.name || "",
+      street: s.street || "",
+      city: s.city || "",
+      state: s.state || "",
+      pincode: s.pincode || "",
+      postOffice: s.post_office || "",
+    },
+    totalAmount: o.total,
+    subtotal: items.length ? subtotal : o.subtotal,
+    // orders placed before tax records existed get the same maths recomputed
+    taxBreakdown: (o.tax_breakdown as TaxBreakdown | null) || computeTaxBreakdown(o.total, s.state),
+    createdAt: o.created_at,
+    updatedAt: o.updated_at,
+    orderItems: items,
+  };
+}
+
+export type SerializedOrder = ReturnType<typeof serializeOrder>;

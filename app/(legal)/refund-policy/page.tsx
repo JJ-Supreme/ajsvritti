@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Refund Policy | AJS Vritti Vision Marketing',
+  title: 'Refund Policy',
   description: 'Refund Policy for AJS Vritti Vision Marketing.',
 }
 

@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { getRequestAuth } from "@/lib/auth-server";
-import { calculateOrderGst } from "@/lib/gst";
+import { calculateOrderGst, computeTaxBreakdown } from "@/lib/gst";
 import { getBulkUnitPrice } from "@/lib/utils/pricing";
+import { MAX_QTY_PER_ITEM } from "@/lib/constants";
 import { getAllProducts } from "@/lib/services/products";
-import { createOrder, generateOrderNumber } from "@/lib/services/orders";
+import { createOrder, generateOrderNumber, formatAddress } from "@/lib/services/orders";
+import { upsertDefaultFromOrder } from "@/lib/services/addresses";
 import { sendOrderConfirmationEmail } from "@/lib/email";
 
 export async function POST(req: Request) {
   try {
     const authUser = await getRequestAuth();
+    if (!authUser) {
+      return NextResponse.json({ error: "Please sign in to place an order" }, { status: 401 });
+    }
+
     const body = await req.json();
     const {
       items,
@@ -46,9 +52,16 @@ export async function POST(req: Request) {
       if (!product) {
         return NextResponse.json({ error: "A product in your cart is no longer available" }, { status: 400 });
       }
+      const quantity = Math.max(1, Math.floor(item.quantity || 1));
+      if (quantity > MAX_QTY_PER_ITEM) {
+        return NextResponse.json(
+          { error: `Maximum ${MAX_QTY_PER_ITEM} units per item. Please reduce the quantity of "${product.title}".` },
+          { status: 400 }
+        );
+      }
       lines.push({
         product,
-        quantity: Math.max(1, Math.floor(item.quantity || 1)),
+        quantity,
         size: item.size || undefined,
         color: item.selectedColor || undefined,
       });
@@ -81,20 +94,33 @@ export async function POST(req: Request) {
       state: postOffice?.state || "",
       post_office: postOffice?.name || "",
     };
-    const addressText = [address, shippingAddress.post_office, shippingAddress.city, shippingAddress.state, shippingAddress.pincode]
-      .filter(Boolean)
-      .join(", ");
+    const addressText = formatAddress(shippingAddress);
+    const tax = computeTaxBreakdown(totalAmount, shippingAddress.state);
 
     const orderNumber = generateOrderNumber();
     const base = {
       order_number: orderNumber,
-      user_id: authUser?.id || null,
-      guest_email: customerEmail || authUser?.email || null,
+      user_id: authUser.id,
+      guest_email: customerEmail || authUser.email || null,
       guest_phone: customerPhone,
       subtotal,
       total: totalAmount,
       shipping_address: shippingAddress,
       notes: notes || null,
+      tax_breakdown: tax,
+    };
+
+    const saveDefaultAddress = () => {
+      if (!shippingAddress.city || !shippingAddress.state || !shippingAddress.pincode) return;
+      upsertDefaultFromOrder(authUser.id, {
+        label: "Home",
+        full_name: String(customerName).trim(),
+        phone: String(customerPhone).replace(/\D/g, "").slice(-10),
+        street: String(address).trim(),
+        city: shippingAddress.city,
+        state: shippingAddress.state,
+        pin_code: String(shippingAddress.pincode),
+      }).catch((err) => console.error("Saving default address failed:", err?.message || err));
     };
 
     if (paymentMethod === "cod") {
@@ -102,6 +128,7 @@ export async function POST(req: Request) {
       if (!result.success) {
         return NextResponse.json({ error: result.error }, { status: 500 });
       }
+      saveDefaultAddress();
       if (base.guest_email) {
         sendOrderConfirmationEmail({
           to: base.guest_email,
@@ -110,13 +137,15 @@ export async function POST(req: Request) {
           total: totalAmount,
           paymentMethod: "cod",
           address: addressText,
+          tax,
         }).catch((err) => console.error("Order confirmation email failed:", err));
       }
       return NextResponse.json({
         success: true,
         orderId: result.order.id,
+        orderNumber,
         message: "Order placed successfully",
-        metadata: { amount: totalAmount },
+        metadata: { amount: totalAmount, orderNumber },
       });
     }
 
@@ -140,10 +169,12 @@ export async function POST(req: Request) {
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
+    saveDefaultAddress();
 
     return NextResponse.json({
       success: true,
       orderId: result.order.id,
+      orderNumber,
       metadata: {
         amount: totalAmount,
         razorpayOrderId: rzpOrder.id,

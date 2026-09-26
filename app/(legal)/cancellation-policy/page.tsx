@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Cancellation Policy | AJS Vritti Vision Marketing',
+  title: 'Cancellation Policy',
   description: 'Cancellation Policy for AJS Vritti Vision Marketing.',
 }
 

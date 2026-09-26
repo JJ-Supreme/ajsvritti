@@ -13,6 +13,10 @@ const SidebarItems = ({ categories, topLevelCategories }: SidebarItemsProps) => 
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  const FILTER_PARAMS = ["sort", "price", "minPrice", "q", "category", "topLevelCategory", "parentCategory", "featured", "new", "deals"];
+  const hasActiveFilters =
+    FILTER_PARAMS.some((key) => searchParams.has(key)) || (pathName.startsWith("/shop/") && pathName !== "/shop");
+
   const currentCategory = searchParams.get("category");
   const currentTopLevel = searchParams.get("topLevelCategory");
 
@@ -35,6 +39,16 @@ const SidebarItems = ({ categories, topLevelCategories }: SidebarItemsProps) => 
 
   return (
     <div className="space-y-6">
+      {hasActiveFilters && (
+        <button
+          type="button"
+          onClick={() => router.push("/shop")}
+          className="w-full text-sm font-medium text-primary border border-primary/30 rounded-md px-3 py-2 hover:bg-accent transition-colors"
+        >
+          Clear all filters
+        </button>
+      )}
+
       {/* Top Level Category Filter */}
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Department</p>

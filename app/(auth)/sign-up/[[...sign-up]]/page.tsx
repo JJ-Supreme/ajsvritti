@@ -1,18 +1,25 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuthUser } from "@/hooks/use-auth-user";
 
 export default function Page() {
   const router = useRouter();
+  const { isSignedIn, isLoading: authLoading } = useAuthUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Already signed in: no need to register again.
+  useEffect(() => {
+    if (!authLoading && isSignedIn) router.replace("/");
+  }, [authLoading, isSignedIn, router]);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -52,6 +59,8 @@ export default function Page() {
       setLoading(false);
     }
   };
+
+  if (authLoading || isSignedIn) return null;
 
   return (
     <div className="flex justify-center items-center min-h-[90vh] p-4">

@@ -1,30 +1,30 @@
 import { type Metadata } from "next";
+import { notFound } from "next/navigation";
 import ProductItem from "./_components/product-item";
 import { getProductFromDB } from "@/lib/serverDataAccess";
 import Footer from "@/components/footer";
-import { siteConfig } from "@/config/site";
+
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
 }: {
   params: { productId: string };
 }): Promise<Metadata> {
-  console.log('[ProductPage] Fetching metadata for product:', params.productId);
-  const getProducts = await getProductFromDB(params.productId);
+  const product = await getProductFromDB(params.productId);
 
-  if (!getProducts)
-    return {
-      title: "AJS Vritti Vision Marketing",
-      description: "Your trusted destination for high-quality IT hardware and computer accessories.",
-    };
+  if (!product) return { title: "Product not found" };
 
   return {
-    title: `${getProducts.title} | ${siteConfig.name}`,
-    description: `${getProducts.title} - ${getProducts.category}`,
+    title: product.title,
+    description: `${product.title} - ${product.category}`,
   };
 }
 
-const ProductPage = ({ params }: { params: { productId: string } }) => {
+const ProductPage = async ({ params }: { params: { productId: string } }) => {
+  const product = await getProductFromDB(params.productId);
+  if (!product) notFound();
+
   return (
     <div>
       <ProductItem />
