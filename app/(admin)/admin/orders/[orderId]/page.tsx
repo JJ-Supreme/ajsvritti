@@ -7,10 +7,9 @@ import { useParams } from "next/navigation";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Mail, Phone } from "lucide-react";
 import Spinner from "@/components/Spinner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils/currency";
 import { ORDER_STATUSES, STATUS_LABEL } from "@/lib/admin/orders";
 
@@ -44,24 +43,49 @@ type Order = {
 };
 
 const badge: Record<string, string> = {
-  pending_payment: "bg-gray-100 text-gray-700",
-  confirmed: "bg-blue-100 text-blue-800",
-  processing: "bg-amber-100 text-amber-800",
-  shipped: "bg-indigo-100 text-indigo-800",
-  delivered: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800",
+  pending_payment: "bg-gray-100 text-gray-700 ring-gray-200",
+  confirmed: "bg-blue-50 text-blue-700 ring-blue-200",
+  processing: "bg-amber-50 text-amber-800 ring-amber-200",
+  shipped: "bg-indigo-50 text-indigo-700 ring-indigo-200",
+  delivered: "bg-green-50 text-green-700 ring-green-200",
+  cancelled: "bg-red-50 text-red-700 ring-red-200",
 };
 
-const Row = ({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) => (
-  <div className="py-2.5 border-b last:border-0 text-sm">
-    <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-    <p className={`font-medium break-words ${mono ? "font-mono text-xs" : ""}`}>{value}</p>
+const Panel = ({
+  title,
+  aside,
+  children,
+}: {
+  title: string;
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+}) => (
+  <section className="rounded-xl border bg-white shadow-sm overflow-hidden">
+    <header className="flex items-center justify-between gap-3 px-5 py-4 border-b">
+      <h2 className="text-sm font-semibold">{title}</h2>
+      {aside}
+    </header>
+    <div className="p-5">{children}</div>
+  </section>
+);
+
+const Field = ({ label, children, mono }: { label: string; children: React.ReactNode; mono?: boolean }) => (
+  <div>
+    <dt className="text-xs text-muted-foreground mb-1">{label}</dt>
+    <dd className={`text-sm font-medium break-words ${mono ? "font-mono text-[13px]" : ""}`}>{children}</dd>
   </div>
 );
 
-const SumRow = ({ label, value, strong }: { label: string; value: React.ReactNode; strong?: boolean }) => (
-  <div className={`flex justify-between py-1 text-sm ${strong ? "border-t mt-2 pt-3 text-base font-semibold" : ""}`}>
-    <span className={strong ? "" : "text-muted-foreground"}>{label}</span>
+const Fact = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <div className="px-5 py-4">
+    <p className="text-xs text-muted-foreground mb-1">{label}</p>
+    <p className="text-base font-semibold tabular-nums">{value}</p>
+  </div>
+);
+
+const SumRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <div className="flex justify-between text-sm">
+    <span className="text-muted-foreground">{label}</span>
     <span className="tabular-nums">{value}</span>
   </div>
 );
@@ -97,76 +121,75 @@ const OrderDetailPage = () => {
   };
 
   if (isLoading) return <div className="p-8"><Spinner /></div>;
-  if (error || !data) return <p className="p-4">Order not found.</p>;
+  if (error || !data) return <p className="p-6">Order not found.</p>;
 
   const a = data.shipping_address || {};
   const cityLine = [a.city, a.state, a.pincode].filter(Boolean).join(", ");
   const units = data.order_items.reduce((n, i) => n + i.quantity, 0);
   const isCod = data.payment_method === "cod";
+  const method = isCod ? "Cash on Delivery" : "Online (Razorpay)";
+  const phone = data.guest_phone || a.phone;
+  const initial = (a.name || data.guest_email || "?").trim().charAt(0).toUpperCase();
+  const placed = new Date(data.created_at);
 
   return (
-    <div className="p-3 sm:p-4 mt-2 max-w-6xl">
-      <Link href="/admin/orders" className="inline-flex items-center text-sm text-primary hover:underline mb-3">
-        <ArrowLeft className="h-4 w-4 mr-1" /> Back to orders
-      </Link>
-
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-5">
-        <h1 className="text-xl sm:text-2xl font-semibold font-mono">{data.order_number}</h1>
-        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${badge[data.status] || "bg-gray-100"}`}>
-          {STATUS_LABEL[data.status] || data.status}
-        </span>
-        <p className="w-full text-sm text-muted-foreground">
-          Placed {new Date(data.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} ·{" "}
-          {isCod ? "Cash on Delivery" : "Online (Razorpay)"}
-        </p>
+    <div className="px-4 sm:px-6 py-5 sm:py-6 space-y-6">
+      <div>
+        <Link href="/admin/orders" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors">
+          <ArrowLeft className="h-4 w-4" /> Back to orders
+        </Link>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight font-mono">{data.order_number}</h1>
+          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ring-1 ring-inset ${badge[data.status] || "bg-gray-100 ring-gray-200"}`}>
+            {STATUS_LABEL[data.status] || data.status}
+          </span>
+        </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3 items-start">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Items{" "}
-                <span className="text-muted-foreground font-normal">
-                  ({units} {units === 1 ? "unit" : "units"})
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="divide-y">
-                {data.order_items.map((i) => (
-                  <li key={i.id} className="flex items-center gap-3 py-3 first:pt-0">
-                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md border bg-surface-1">
-                      {i.product_image && <Image src={i.product_image} alt="" fill sizes="56px" className="object-cover" />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium leading-snug">{i.product_name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {formatPrice(i.unit_price)} × {i.quantity}
-                        {(i.size || i.color) && ` · ${[i.size, i.color].filter(Boolean).join(" / ")}`}
-                      </p>
-                    </div>
-                    <p className="text-sm font-medium tabular-nums">{formatPrice(i.unit_price * i.quantity)}</p>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4 pt-3 border-t">
-                <SumRow label="Subtotal" value={formatPrice(data.subtotal)} />
-                {data.discount > 0 && <SumRow label="Discount" value={`−${formatPrice(data.discount)}`} />}
-                <SumRow label="Shipping" value={data.shipping_fee ? formatPrice(data.shipping_fee) : "Free"} />
-                {data.cod_fee > 0 && <SumRow label="COD fee" value={formatPrice(data.cod_fee)} />}
-                <SumRow label="Total" value={formatPrice(data.total)} strong />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 rounded-xl border bg-white shadow-sm overflow-hidden">
+        <Fact label="Order total" value={formatPrice(data.total)} />
+        <Fact label="Items" value={`${units} ${units === 1 ? "unit" : "units"}`} />
+        <Fact label="Payment" value={method} />
+        <Fact
+          label="Placed on"
+          value={placed.toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })}
+        />
+      </div>
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Status</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] items-start">
+        <Panel title={`Items (${data.order_items.length})`}>
+          <ul className="-my-5 divide-y">
+            {data.order_items.map((i) => (
+              <li key={i.id} className="flex items-center gap-4 py-5">
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border bg-surface-1">
+                  {i.product_image && <Image src={i.product_image} alt="" fill sizes="64px" className="object-cover" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium leading-snug">{i.product_name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatPrice(i.unit_price)} × {i.quantity}
+                    {(i.size || i.color) && ` · ${[i.size, i.color].filter(Boolean).join(" / ")}`}
+                  </p>
+                </div>
+                <p className="text-sm font-semibold tabular-nums">{formatPrice(i.unit_price * i.quantity)}</p>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-5 -mx-5 -mb-5 px-5 py-4 bg-surface-1 border-t space-y-2">
+            <SumRow label="Subtotal" value={formatPrice(data.subtotal)} />
+            {data.discount > 0 && <SumRow label="Discount" value={`−${formatPrice(data.discount)}`} />}
+            <SumRow label="Shipping" value={data.shipping_fee ? formatPrice(data.shipping_fee) : "Free"} />
+            {data.cod_fee > 0 && <SumRow label="COD fee" value={formatPrice(data.cod_fee)} />}
+            <div className="flex justify-between items-baseline pt-3 mt-1 border-t">
+              <span className="text-sm font-semibold">Total</span>
+              <span className="text-xl font-semibold tabular-nums">{formatPrice(data.total)}</span>
+            </div>
+          </div>
+        </Panel>
+
+        <div className="space-y-6">
+          <Panel title="Update status">
+            <div className="space-y-3">
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
@@ -182,55 +205,55 @@ const OrderDetailPage = () => {
                 {saving ? "Saving…" : "Update status"}
               </Button>
               {data.status === "pending_payment" && (
-                <p className="text-xs text-amber-700">
+                <p className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs leading-relaxed text-amber-800">
                   This online order has not been paid yet. Only confirm it manually after checking the payment in Razorpay.
                 </p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </Panel>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Customer</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Row label="Name" value={a.name || "—"} />
-              <Row label="Email" value={data.guest_email || "—"} />
-              <Row label="Phone" value={data.guest_phone || a.phone || "—"} />
-            </CardContent>
-          </Card>
+          <Panel title="Customer">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 text-primary grid place-items-center text-sm font-semibold">
+                {initial}
+              </div>
+              <p className="text-sm font-semibold">{a.name || "—"}</p>
+            </div>
+            <dl className="mt-4 space-y-3 text-sm">
+              <div className="flex items-center gap-2.5">
+                <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="break-all">{data.guest_email || "—"}</span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span>{phone || "—"}</span>
+              </div>
+            </dl>
+          </Panel>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Delivery</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Row
-                label="Address"
-                value={
-                  <>
-                    {a.street && <span className="block">{a.street}</span>}
-                    {a.post_office && <span className="block">{a.post_office}</span>}
-                    {cityLine && <span className="block">{cityLine}</span>}
-                    {!a.street && !cityLine && "—"}
-                  </>
-                }
-              />
-              {data.notes && <Row label="Customer notes" value={data.notes} />}
-            </CardContent>
-          </Card>
+          <Panel title="Delivery">
+            <dl className="space-y-4">
+              <Field label="Ship to">
+                {a.street && <span className="block">{a.street}</span>}
+                {a.post_office && <span className="block">{a.post_office}</span>}
+                {cityLine && <span className="block">{cityLine}</span>}
+                {!a.street && !cityLine && "—"}
+              </Field>
+              {data.notes && <Field label="Customer notes">{data.notes}</Field>}
+            </dl>
+          </Panel>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Payment</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Row label="Method" value={isCod ? "Cash on Delivery" : "Online (Razorpay)"} />
-              {!isCod && <Row label="Payment ID" value={data.payment_id || "—"} mono />}
-              {!isCod && <Row label="Razorpay order" value={data.razorpay_order_id || "—"} mono />}
-              <Row label="Amount" value={formatPrice(data.total)} />
-            </CardContent>
-          </Card>
+          <Panel title="Payment">
+            <dl className="space-y-4">
+              <Field label="Method">{method}</Field>
+              {!isCod && (
+                <>
+                  <Field label="Payment ID" mono>{data.payment_id || "—"}</Field>
+                  <Field label="Razorpay order" mono>{data.razorpay_order_id || "—"}</Field>
+                </>
+              )}
+            </dl>
+          </Panel>
         </div>
       </div>
     </div>
