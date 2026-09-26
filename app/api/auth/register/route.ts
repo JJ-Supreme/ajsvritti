@@ -39,8 +39,12 @@ export async function POST(req: Request) {
       if (existing.user.email_confirmed_at) {
         return NextResponse.json({ error: "Email is already registered" }, { status: 409 });
       }
-      // Unverified account — refresh OTP and resend so the user can recover
+      // Unverified account — refresh OTP and resend so the user can recover.
+      // The password is replaced too: otherwise someone could pre-register a
+      // victim's email with their own password and keep it after the real
+      // owner verifies the address with the emailed code.
       await admin.auth.admin.updateUserById(existing.user.id, {
+        password,
         user_metadata: { ...existing.user.user_metadata, ...otpMeta },
       });
       await sendVerificationEmail(normalizedEmail, otp, origin);
