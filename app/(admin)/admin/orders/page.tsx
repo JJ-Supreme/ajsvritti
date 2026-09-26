@@ -54,7 +54,7 @@ const OrdersPage = () => {
 
   return (
     <div className="p-3 sm:p-4 mt-2">
-      <TitleHeader title="Orders" count={data?.total} description="View and manage customer orders" />
+      <TitleHeader title="Orders" description="View and manage customer orders" />
       <div className="flex flex-wrap gap-3 mb-4">
         <Input
           placeholder="Search order number, email or phone…"
