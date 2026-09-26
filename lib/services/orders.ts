@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { CLIENT_ID } from "@/config/client";
-import { computeTaxBreakdown, type TaxBreakdown } from "@/lib/gst";
+import { taxForStoredOrder, type TaxBreakdown } from "@/lib/gst";
 
 export function generateOrderNumber() {
   const t = Date.now().toString().slice(-7);
@@ -134,8 +134,8 @@ export function serializeOrder(o: any) {
     },
     totalAmount: o.total,
     subtotal: items.length ? subtotal : o.subtotal,
-    // orders placed before tax records existed get the same maths recomputed
-    taxBreakdown: (o.tax_breakdown as TaxBreakdown | null) || computeTaxBreakdown(o.total, s.state),
+    // orders with no (or an old-shape) breakdown are recomputed with base == total
+    taxBreakdown: taxForStoredOrder(o.tax_breakdown, o.total, s.state),
     createdAt: o.created_at,
     updatedAt: o.updated_at,
     orderItems: items,

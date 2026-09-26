@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { taxForStoredOrder } from "@/lib/gst";
 import crypto from "crypto";
 import { createAdminClient } from "@/lib/supabase/server";
 import { CLIENT_ID } from "@/config/client";
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
         total: order.total,
         paymentMethod: "razorpay",
         address: [s.street, s.post_office, s.city, s.state, s.pincode].filter(Boolean).join(", "),
-        tax: order.tax_breakdown || null,
+        tax: taxForStoredOrder(order.tax_breakdown, order.total, order.shipping_address?.state),
       }).catch((err) => console.error("Order confirmation email failed:", err));
     }
 

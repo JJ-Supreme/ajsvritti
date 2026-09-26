@@ -1,13 +1,21 @@
 /**
- * Indian GST utilities.
+ * Indian GST utilities — AJS invoice pattern.
  *
- * Every listed price is GST-inclusive at a flat 18%. The order total therefore
- * already contains the tax; this module only *unbundles* it for display and
- * records:
- *   taxable value = round(total / 1.18)
- *   gst           = total - taxable value
- * Intra-state orders (shipping state == seller state) split the GST into
- * CGST + SGST halves; every other state is IGST.
+ * The listed/unit price is the BASE amount. Every AJS invoice shows GST on top
+ * of it and then discounts the same GST back, so what the customer pays
+ * (Grand Total) always equals the base amount:
+ *
+ *   Base Amount        ₹100
+ *   (+) SGST 9%        ₹  9
+ *   (+) CGST 9%        ₹  9
+ *   Total              ₹118
+ *   (-) Discount       ₹ 18   (= the GST)
+ *   Grand Total        ₹100   (= Base Amount)
+ *
+ * gst = round(base * 18%). Intra-state orders (shipping state == seller state)
+ * split it into CGST + SGST; other states show IGST. (The sample invoice shows
+ * CGST/SGST even for a Kerala customer; we deliberately stay state-aware.)
+ * Rounding: CGST takes the extra rupee when gst is odd, so cgst + sgst == gst.
  *
  * This single function feeds the cart, checkout, server, email, confirmation
  * page and order history so the numbers cannot drift apart.
@@ -18,11 +26,16 @@ export const GST_RATE = 0.18;
 
 export type TaxBreakdown = {
   rate: number;
-  taxable_value: number;
+  base_amount: number;
+  gst: number; // total GST shown (and discounted back)
   cgst: number;
   sgst: number;
   igst: number;
   is_intra_state: boolean;
+  state_known: boolean; // false => only the combined `gst` line is meaningful
+  total_with_gst: number; // base + gst
+  discount: number; // == gst
+  grand_total: number; // == base_amount (what the customer pays)
   state: string | null;
   seller_state: string;
 };
@@ -38,34 +51,44 @@ export function isIntraState(shippingState?: string | null): boolean {
   return !!a && a === normaliseState(SELLER_STATE);
 }
 
-/** Unbundles the GST already included in a tax-inclusive `total`. */
-export function computeTaxBreakdown(total: number, shippingState?: string | null): TaxBreakdown {
-  const safeTotal = Math.max(0, Math.round(total || 0));
-  const taxable = Math.round(safeTotal / (1 + GST_RATE));
-  const gst = safeTotal - taxable;
+/** Invoice-style GST for a base amount (sum of the items, after bulk discount). */
+export function computeInvoiceTax(baseAmount: number, shippingState?: string | null): TaxBreakdown {
+  const base = Math.max(0, Math.round(baseAmount || 0));
+  const gst = Math.round(base * GST_RATE);
+  const known = !!normaliseState(shippingState);
   const intra = isIntraState(shippingState);
-  const cgst = intra ? Math.floor(gst / 2) : 0;
-  const sgst = intra ? gst - cgst : 0;
+  const cgst = known && intra ? Math.ceil(gst / 2) : 0;
+  const sgst = known && intra ? gst - cgst : 0;
   return {
     rate: GST_RATE,
-    taxable_value: taxable,
+    base_amount: base,
+    gst,
     cgst,
     sgst,
-    igst: intra ? 0 : gst,
-    is_intra_state: intra,
+    igst: known && !intra ? gst : 0,
+    is_intra_state: known && intra,
+    state_known: known,
+    total_with_gst: base + gst,
+    discount: gst,
+    grand_total: base,
     state: shippingState || null,
     seller_state: SELLER_STATE,
   };
 }
 
-export const totalGst = (t: Pick<TaxBreakdown, "cgst" | "sgst" | "igst">) => t.cgst + t.sgst + t.igst;
+/** Rebuilds a breakdown for orders stored without one (or in the old shape): base == order total. */
+export function taxForStoredOrder(stored: any, total: number, shippingState?: string | null): TaxBreakdown {
+  if (stored && typeof stored.base_amount === "number" && typeof stored.gst === "number") {
+    return stored as TaxBreakdown;
+  }
+  return computeInvoiceTax(total, shippingState);
+}
 
-/** Cart-level totals. Prices are tax-inclusive, so `total === subtotal`. */
+/** Cart-level totals. `total` is the Grand Total the customer pays (== subtotal, i.e. the base amount). */
 export function calculateOrderGst(
   items: { price: number; quantity: number; topLevelCategory?: string }[]
 ): { gst: number; subtotal: number; total: number } {
   let subtotal = 0;
   for (const item of items) subtotal += item.price * item.quantity;
-  const { taxable_value } = computeTaxBreakdown(subtotal);
-  return { gst: subtotal - taxable_value, subtotal, total: subtotal };
+  return { gst: computeInvoiceTax(subtotal).gst, subtotal, total: subtotal };
 }

@@ -30,7 +30,6 @@ type Order = {
   guest_phone: string | null;
   notes: string | null;
   shipping_address: Record<string, string> | null;
-  tax_breakdown: Record<string, any> | null;
   created_at: string;
   order_items: {
     id: string;
@@ -157,10 +156,6 @@ const OrderDetailPage = () => {
             <Row label="Shipping" value={data.shipping_fee ? formatPrice(data.shipping_fee) : "Free"} />
             {data.cod_fee > 0 && <Row label="COD fee" value={formatPrice(data.cod_fee)} />}
             <Row label="Total" value={formatPrice(data.total)} />
-            {data.tax_breakdown &&
-              Object.entries(data.tax_breakdown).map(([k, v]) => (
-                <Row key={k} label={k.replace(/_/g, " ")} value={typeof v === "number" ? formatPrice(v) : String(v)} />
-              ))}
           </CardContent>
         </Card>
       </div>

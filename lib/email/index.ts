@@ -57,16 +57,21 @@ export async function sendOrderConfirmationEmail(p: OrderEmailParams) {
     return;
   }
   const t = p.tax;
+  // Invoice pattern: Base Amount, (+) GST, Total, (-) Discount, Grand Total (== Base Amount)
+  const row = (label: string, value: string, extra = "") =>
+    `<tr><td style="padding:3px 0;${extra}">${label}</td><td style="padding:3px 0;text-align:right;${extra}">${value}</td></tr>`;
   const taxRows = t
-    ? `<table style="width:100%;border-collapse:collapse;font-size:12px;color:#777;background:#fafafa;margin:0 0 12px">
-        <tr><td colspan="2" style="padding:8px 10px 2px;font-size:10px;text-transform:uppercase;letter-spacing:0.04em">Tax breakdown (included in price)</td></tr>
-        <tr><td style="padding:2px 10px">Taxable value</td><td style="padding:2px 10px;text-align:right">${inr(t.taxable_value)}</td></tr>
+    ? `<table style="width:100%;border-collapse:collapse;font-size:13px;color:#555;margin:0 0 12px">
+        ${row("Base Amount", inr(t.base_amount))}
         ${
-          t.is_intra_state
-            ? `<tr><td style="padding:2px 10px">CGST (9%)</td><td style="padding:2px 10px;text-align:right">${inr(t.cgst)}</td></tr>
-        <tr><td style="padding:2px 10px 8px">SGST (9%)</td><td style="padding:2px 10px 8px;text-align:right">${inr(t.sgst)}</td></tr>`
-            : `<tr><td style="padding:2px 10px 8px">IGST (18%)</td><td style="padding:2px 10px 8px;text-align:right">${inr(t.igst)}</td></tr>`
+          !t.state_known
+            ? row("(+) GST: 18.00%", inr(t.gst))
+            : t.is_intra_state
+              ? row("(+) SGST: 9.00%", inr(t.sgst)) + row("(+) CGST: 9.00%", inr(t.cgst))
+              : row("(+) IGST: 18.00%", inr(t.igst))
         }
+        ${row("Total", inr(t.total_with_gst), "font-weight:bold;color:#222;")}
+        ${row("(-) Discount", inr(t.discount), "color:#059669;")}
       </table>`
     : "";
   const rows = p.items
@@ -85,7 +90,6 @@ export async function sendOrderConfirmationEmail(p: OrderEmailParams) {
         <table style="width:100%;border-collapse:collapse;margin:16px 0">${rows}
           <tr><td style="padding:10px 0;font-weight:bold">Grand Total</td><td style="padding:10px 0;font-weight:bold;text-align:right">${inr(p.total)}</td></tr>
         </table>
-        <p style="color:#888;font-size:11px;margin:0 0 4px">All prices are inclusive of GST.</p>
         ${taxRows}
         <p style="color:#555;font-size:13px">Payment: <strong>${p.paymentMethod === "cod" ? "Cash on Delivery" : "Online Payment"}</strong></p>
         <p style="color:#555;font-size:13px">Shipping to: ${p.address}</p>

@@ -22,7 +22,7 @@ import { Loader2, Check } from "lucide-react";
 import useCart from "@/hooks/use-cart";
 import axios from "axios";
 import { useAuthUser } from "@/hooks/use-auth-user";
-import { calculateOrderGst, computeTaxBreakdown } from "@/lib/gst";
+import { calculateOrderGst, computeInvoiceTax } from "@/lib/gst";
 import { getBulkUnitPrice } from "@/lib/utils/pricing";
 import { formatPrice } from "@/lib/utils/currency";
 
@@ -187,8 +187,7 @@ export function CheckoutForm({ onSuccess, onBack }: CheckoutFormProps) {
       quantity: item.quantity,
     }))
   ).total;
-  const tax = computeTaxBreakdown(cartTotal, selectedPostOffice?.state);
-  const stateKnown = !!selectedPostOffice?.state;
+  const tax = computeInvoiceTax(cartTotal, selectedPostOffice?.state);
 
   const safe = (v: any) => (typeof v === "string" ? v.trim() : "");
   const toUpper = (v: any) => safe(v).toUpperCase();
@@ -586,40 +585,48 @@ export function CheckoutForm({ onSuccess, onBack }: CheckoutFormProps) {
         <div className="rounded-lg border border-border bg-white p-4 text-sm space-y-2">
           <h3 className="text-base font-medium">Order Summary</h3>
           <div className="flex justify-between text-muted-foreground">
-            <span>Taxable value</span>
-            <span className="tabular-nums text-foreground">{formatPrice(tax.taxable_value)}</span>
+            <span>Base Amount</span>
+            <span className="tabular-nums text-foreground">{formatPrice(tax.base_amount)}</span>
           </div>
-          {!stateKnown ? (
+          {!tax.state_known ? (
             <div className="flex justify-between text-muted-foreground">
-              <span>GST (18%) included</span>
-              <span className="tabular-nums text-foreground">{formatPrice(cartTotal - tax.taxable_value)}</span>
+              <span>(+) GST: 18.00%</span>
+              <span className="tabular-nums text-foreground">{formatPrice(tax.gst)}</span>
             </div>
           ) : tax.is_intra_state ? (
             <>
               <div className="flex justify-between text-muted-foreground">
-                <span>CGST (9%)</span>
-                <span className="tabular-nums text-foreground">{formatPrice(tax.cgst)}</span>
+                <span>(+) SGST: 9.00%</span>
+                <span className="tabular-nums text-foreground">{formatPrice(tax.sgst)}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>SGST (9%)</span>
-                <span className="tabular-nums text-foreground">{formatPrice(tax.sgst)}</span>
+                <span>(+) CGST: 9.00%</span>
+                <span className="tabular-nums text-foreground">{formatPrice(tax.cgst)}</span>
               </div>
             </>
           ) : (
             <div className="flex justify-between text-muted-foreground">
-              <span>IGST (18%)</span>
+              <span>(+) IGST: 18.00%</span>
               <span className="tabular-nums text-foreground">{formatPrice(tax.igst)}</span>
             </div>
           )}
+          <div className="flex justify-between text-muted-foreground">
+            <span>Total</span>
+            <span className="tabular-nums text-foreground">{formatPrice(tax.total_with_gst)}</span>
+          </div>
+          <div className="flex justify-between text-emerald-600">
+            <span>(−) Discount</span>
+            <span className="tabular-nums">−{formatPrice(tax.discount)}</span>
+          </div>
           <div className="flex justify-between text-muted-foreground">
             <span>Shipping</span>
             <span className="text-foreground">Free</span>
           </div>
           <div className="flex justify-between border-t border-border pt-2 font-semibold">
-            <span>Total to pay</span>
-            <span className="tabular-nums">{formatPrice(cartTotal)}</span>
+            <span>Grand Total</span>
+            <span className="tabular-nums">{formatPrice(tax.grand_total)}</span>
           </div>
-          <p className="text-xs text-muted-foreground">All prices are inclusive of GST.</p>
+          <p className="text-xs text-muted-foreground">Price shown is the final amount payable — GST is shown and discounted at checkout.</p>
         </div>
 
         <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 pt-4">

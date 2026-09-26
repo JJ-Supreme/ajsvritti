@@ -1,40 +1,51 @@
 import type { TaxBreakdown } from "@/lib/gst";
 import { formatPrice } from "@/lib/utils/currency";
 
-// Same rows everywhere an order's totals are shown (confirmation page, order history).
-export function TaxLines({ tax, total }: { tax: TaxBreakdown; total: number }) {
+// Invoice-style rows, shared by the confirmation page and order history:
+// Base Amount, (+) GST, Total, (-) Discount, Grand Total (== Base Amount).
+export function TaxLines({ tax }: { tax: TaxBreakdown; total?: number }) {
   return (
     <div className="pt-3 mt-1 border-t space-y-1.5 text-sm">
       <div className="flex justify-between text-gray-600">
-        <span>Taxable value</span>
-        <span className="tabular-nums">{formatPrice(tax.taxable_value)}</span>
+        <span>Base Amount</span>
+        <span className="tabular-nums">{formatPrice(tax.base_amount)}</span>
       </div>
-      {tax.is_intra_state ? (
+      {tax.state_known && tax.is_intra_state && (
         <>
           <div className="flex justify-between text-gray-600">
-            <span>CGST (9%)</span>
-            <span className="tabular-nums">{formatPrice(tax.cgst)}</span>
-          </div>
-          <div className="flex justify-between text-gray-600">
-            <span>SGST (9%)</span>
+            <span>(+) SGST: 9.00%</span>
             <span className="tabular-nums">{formatPrice(tax.sgst)}</span>
           </div>
+          <div className="flex justify-between text-gray-600">
+            <span>(+) CGST: 9.00%</span>
+            <span className="tabular-nums">{formatPrice(tax.cgst)}</span>
+          </div>
         </>
-      ) : (
+      )}
+      {tax.state_known && !tax.is_intra_state && (
         <div className="flex justify-between text-gray-600">
-          <span>IGST (18%)</span>
+          <span>(+) IGST: 18.00%</span>
           <span className="tabular-nums">{formatPrice(tax.igst)}</span>
         </div>
       )}
-      <div className="flex justify-between text-gray-600">
-        <span>Shipping</span>
-        <span>Free</span>
+      {!tax.state_known && (
+        <div className="flex justify-between text-gray-600">
+          <span>(+) GST: 18.00%</span>
+          <span className="tabular-nums">{formatPrice(tax.gst)}</span>
+        </div>
+      )}
+      <div className="flex justify-between text-gray-800 font-medium">
+        <span>Total</span>
+        <span className="tabular-nums">{formatPrice(tax.total_with_gst)}</span>
+      </div>
+      <div className="flex justify-between text-emerald-600">
+        <span>(-) Discount</span>
+        <span className="tabular-nums">{formatPrice(tax.discount)}</span>
       </div>
       <div className="flex justify-between font-semibold text-base pt-1.5 border-t">
         <span>Grand Total</span>
-        <span className="tabular-nums">{formatPrice(total)}</span>
+        <span className="tabular-nums">{formatPrice(tax.grand_total)}</span>
       </div>
-      <p className="text-xs text-gray-500">All prices are inclusive of GST.</p>
     </div>
   );
 }

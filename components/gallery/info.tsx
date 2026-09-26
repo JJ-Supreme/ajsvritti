@@ -169,7 +169,7 @@ const Info: React.FC<InfoProps> = ({ data, productDetails }) => {
                  <span className="text-2xl font-bold text-foreground tabular-nums">{formatPrice(data.price)}</span>
                  <span className="text-xs text-muted-foreground">Unit Price</span>
               </div>
-              <p className="-mt-3 mb-4 text-[11px] text-muted-foreground">All prices are inclusive of GST.</p>
+              <p className="-mt-3 mb-4 text-[11px] text-muted-foreground">Final price — GST discounted at checkout.</p>
 
               {/* Bulk Pricing */}
               <div className="mb-4 bg-white border border-border rounded-lg overflow-hidden">

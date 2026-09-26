@@ -89,12 +89,20 @@ export function Summary() {
           </>
         )}
         <div className="flex items-center justify-between pt-4">
-          <div className="text-sm text-muted-foreground">Subtotal</div>
+          <div className="text-sm text-muted-foreground">Base Amount</div>
           <p className="text-foreground font-medium tabular-nums">{formatPrice(discountedSubtotal)}</p>
         </div>
         <div className="flex items-center justify-between pt-2 border-t border-border">
-          <div className="text-sm text-muted-foreground">GST (18%) included in price</div>
+          <div className="text-sm text-muted-foreground">(+) GST: 18.00%</div>
           <p className="text-foreground font-medium tabular-nums">{formatPrice(totalGst)}</p>
+        </div>
+        <div className="flex items-center justify-between pt-2 border-t border-border">
+          <div className="text-sm text-muted-foreground">Total</div>
+          <p className="text-foreground font-medium tabular-nums">{formatPrice(discountedSubtotal + totalGst)}</p>
+        </div>
+        <div className="flex items-center justify-between pt-2 border-t border-border">
+          <div className="text-sm text-emerald-600 font-medium">(−) Discount</div>
+          <p className="text-emerald-600 font-medium tabular-nums">−{formatPrice(totalGst)}</p>
         </div>
         <div className="flex items-center justify-between pt-2 border-t border-border">
           <div className="text-sm text-muted-foreground">Shipping</div>
@@ -107,7 +115,7 @@ export function Summary() {
           </p>
         </div>
         <p className="text-xs text-muted-foreground">
-          All prices are inclusive of GST. CGST/SGST or IGST is itemised at checkout once your delivery state is known.
+          Price shown is the final amount payable — GST is shown and discounted at checkout.
         </p>
       </div>
       {!isSignedIn && items.length > 0 ? (

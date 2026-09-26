@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Razorpay from "razorpay";
 import { getRequestAuth } from "@/lib/auth-server";
-import { calculateOrderGst, computeTaxBreakdown } from "@/lib/gst";
+import { calculateOrderGst, computeInvoiceTax } from "@/lib/gst";
 import { getBulkUnitPrice } from "@/lib/utils/pricing";
 import { MAX_QTY_PER_ITEM } from "@/lib/constants";
 import { getAllProducts } from "@/lib/services/products";
@@ -95,7 +95,7 @@ export async function POST(req: Request) {
       post_office: postOffice?.name || "",
     };
     const addressText = formatAddress(shippingAddress);
-    const tax = computeTaxBreakdown(totalAmount, shippingAddress.state);
+    const tax = computeInvoiceTax(totalAmount, shippingAddress.state);
 
     const orderNumber = generateOrderNumber();
     const base = {
