@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { CLIENT_ID } from "@/config/client";
-import { ORDER_STATUSES } from "@/lib/admin/orders";
+import { ORDER_STATUSES, visibleUntilNow } from "@/lib/admin/orders";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +24,7 @@ export async function GET(req: Request) {
       { count: "exact" }
     )
     .eq("client_id", CLIENT_ID)
+    .lte("created_at", visibleUntilNow())
     .order("created_at", { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1);
   if (status && (ORDER_STATUSES as readonly string[]).includes(status)) query = query.eq("status", status);

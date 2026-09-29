@@ -35,3 +35,8 @@ export const PAYMENT_SHORT_LABEL: Record<string, string> = {
   razorpay: "Razorpay",
   airpay: "Airpay",
 };
+
+// Orders can be stored with a created_at in the future (scheduled logs). They stay
+// invisible in the admin until that moment passes: every admin query filters on the
+// server clock at request time, so nothing needs to run on a schedule.
+export const visibleUntilNow = () => new Date().toISOString();

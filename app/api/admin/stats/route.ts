@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { CLIENT_ID } from "@/config/client";
-import { REVENUE_STATUSES } from "@/lib/admin/orders";
+import { REVENUE_STATUSES, visibleUntilNow } from "@/lib/admin/orders";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +17,7 @@ export async function GET() {
       .from("orders")
       .select("id,order_number,status,total,user_id,guest_email,guest_phone,shipping_address,created_at")
       .eq("client_id", CLIENT_ID)
+      .lte("created_at", visibleUntilNow())
       .order("created_at", { ascending: false })
       .limit(20000),
   ]);

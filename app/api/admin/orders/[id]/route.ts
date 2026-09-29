@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { CLIENT_ID } from "@/config/client";
-import { ORDER_STATUSES } from "@/lib/admin/orders";
+import { ORDER_STATUSES, visibleUntilNow } from "@/lib/admin/orders";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +20,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     .select("*, order_items(*)")
     .eq("client_id", CLIENT_ID)
     .eq("id", params.id)
+    .lte("created_at", visibleUntilNow())
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Order not found" }, { status: 404 });
@@ -42,6 +43,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     .update({ status: parsed.data.status, updated_at: new Date().toISOString() })
     .eq("client_id", CLIENT_ID)
     .eq("id", params.id)
+    .lte("created_at", visibleUntilNow()) // scheduled (future) orders are not visible yet
     .select("id,status")
     .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
