@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { siteConfig } from "@/config/site";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
@@ -50,6 +51,7 @@ export default function RootLayout({
           <ToastProvider />
           {children}
         </ReactQueryProvider>
+        <Analytics />
         {GA_ID && (
           <>
             <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
