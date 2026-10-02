@@ -52,3 +52,4 @@ next-env.d.ts
 
 # Local Paytm credential test (contains secrets at runtime via env) — never commit
 scripts/paytm-test.mjs
+.env*
