@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { siteConfig } from "@/config/site";
 import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
 import { ToastProvider } from "@/providers/toast-provider";
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -47,6 +50,14 @@ export default function RootLayout({
           <ToastProvider />
           {children}
         </ReactQueryProvider>
+        {GA_ID && (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
+            <Script id="ga-init" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');`}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );
